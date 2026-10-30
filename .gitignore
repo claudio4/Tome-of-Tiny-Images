@@ -6,3 +6,6 @@ dist/
 src/codecs/jxl/build/*
 !src/codecs/jxl/build/jxl.d.ts
 tests/fixtures/
+
+# Real-world images for tuning defaults (kept local)
+test-images/
