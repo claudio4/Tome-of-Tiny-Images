@@ -1,0 +1,91 @@
+:root {
+  color-scheme: light dark;
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --text: #16181d;
+  --muted: #5f6672;
+  --border: #e2e4e9;
+  --border-strong: #c5c9d2;
+  --accent: #3b5bdb;
+  --accent-soft: #edf1ff;
+  --accent-text: #ffffff;
+  --good: #2b8a3e;
+  --bad: #c92a2a;
+  --warn: #b35c00;
+  --checker: #e9eaee;
+  --radius: 10px;
+  font-family:
+    Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.45;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111317;
+    --surface: #1a1d23;
+    --text: #e8eaef;
+    --muted: #9aa1ad;
+    --border: #2a2e36;
+    --border-strong: #3d424d;
+    --accent: #7c95ff;
+    --accent-soft: #1e2540;
+    --accent-text: #0d1020;
+    --good: #69db7c;
+    --bad: #ff8787;
+    --warn: #ffb054;
+    --checker: #23262d;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+button {
+  font: inherit;
+  padding: 6px 12px;
+  border-radius: 7px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+}
+button.link {
+  border: none;
+  background: none;
+  color: var(--accent);
+  padding: 4px;
+  font-weight: 600;
+}
+button.icon {
+  padding: 6px 9px;
+  color: var(--muted);
+}
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.muted {
+  color: var(--muted);
+}

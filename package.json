@@ -1,0 +1,32 @@
+{
+  "name": "batch-image-compressor",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "predev": "scripts/ensure-generated.sh",
+    "dev": "vite",
+    "prebuild": "scripts/ensure-generated.sh",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "pretest": "scripts/ensure-generated.sh --fixtures",
+    "test": "vitest run",
+    "build:jxl": "scripts/build-jxl.sh",
+    "fixtures": "python3 -I scripts/make-fixtures.py tests/fixtures"
+  },
+  "dependencies": {
+    "@jsquash/avif": "^2.1.1",
+    "fflate": "^0.8.3"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "@tsconfig/svelte": "^5.0.8",
+    "@types/node": "^26.6.6",
+    "svelte": "^5.57.3",
+    "svelte-check": "^4.7.7",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  }
+}

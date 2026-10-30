@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.cache/
+*.log
+# Generated locally (scripts/build-jxl.sh, scripts/make-fixtures.py)
+src/codecs/jxl/build/*
+!src/codecs/jxl/build/jxl.d.ts
+tests/fixtures/
