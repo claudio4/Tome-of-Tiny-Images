@@ -10,8 +10,8 @@
       const j = settings.jxl;
       const pixels = j.lossless ? 'lossless' : `visually ${j.quality >= 90 ? 'lossless' : 'near-lossless'} (distance ${qualityToDistance(j.quality).toFixed(2)})`;
       if (j.jpegMode === 'reencode') return `All images are encoded ${pixels}.`;
-      const jpegs = j.jpegMode === 'auto' && !j.lossless ? 'JPEGs are transcoded losslessly unless re-encoding is much smaller' : 'JPEGs are transcoded losslessly';
-      return `${jpegs}; other images are ${pixels}.`;
+      const jpegs = j.jpegMode === 'auto' && !j.lossless ? 'JPEGs may be transcoded losslessly when smaller' : 'JPEGs transcoded losslessly';
+      return `${pixels[0].toUpperCase()}${pixels.slice(1)}; ${jpegs}.`;
     }
     const a = settings.avif;
     return a.lossless ? 'All images are encoded losslessly.' : `Quality ${a.quality}, ${a.chroma444 ? '4:4:4' : '4:2:0'} chroma.`;
