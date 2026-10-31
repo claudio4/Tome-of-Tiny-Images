@@ -23,7 +23,7 @@
       <div class="name">
         <span class="filename" title={item.file.name}>{item.file.name}</span>
         <span class="meta">
-          {#if item.format}<span class="badge">{item.format.toUpperCase()}</span>{/if}
+          {#if item.output && item.outName}<span class="badge">{item.outName.split('.').pop()!.toUpperCase()}</span>{/if}
           {formatBytes(item.file.size)}
           {#if item.method}· {item.method}{/if}
           {#if item.status === 'done' && item.producedWith !== currentKey}· <em>older settings</em>{/if}
