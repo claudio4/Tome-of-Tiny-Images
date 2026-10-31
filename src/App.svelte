@@ -132,7 +132,7 @@
 
 <main>
   <header>
-    <h1>Image Compressor</h1>
+    <h1>Tome of Tiny Images</h1>
     <p class="tagline">JPEG XL &amp; AVIF, right in your browser. Nothing is uploaded.</p>
   </header>
 

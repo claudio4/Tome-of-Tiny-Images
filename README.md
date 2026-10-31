@@ -1,4 +1,4 @@
-# Batch Image Compressor
+# Tome of Tiny Images (TOTI)
 
 Compress PNG, JPEG, WebP and GIF images to **JPEG XL** or **AVIF**, entirely in the browser. Nothing is uploaded.
 
