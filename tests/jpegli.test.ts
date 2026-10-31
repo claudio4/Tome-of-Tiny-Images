@@ -79,6 +79,40 @@ describe('JPEG → lossy JXL keeps color profile and orientation', () => {
   });
 });
 
+/**
+ * Box types of a JXL file, with Brotli-compressed boxes ('brob') reported by
+ * their inner type. A bare codestream (no container) has none and can't carry Exif/XMP.
+ */
+function jxlBoxes(jxl: Uint8Array): string[] {
+  if (jxl[0] === 0xff && jxl[1] === 0x0a) return [];
+  const view = new DataView(jxl.buffer, jxl.byteOffset, jxl.byteLength);
+  const types: string[] = [];
+  for (let p = 0; p + 8 <= jxl.length; ) {
+    let size = view.getUint32(p);
+    const type = String.fromCharCode(...jxl.subarray(p + 4, p + 8));
+    types.push(type === 'brob' ? String.fromCharCode(...jxl.subarray(p + 8, p + 12)) : type);
+    if (size === 1) size = Number(view.getBigUint64(p + 8));
+    if (size === 0) break; // box extends to the end of the file
+    p += size;
+  }
+  return types;
+}
+
+describe('metadata', () => {
+  it('lossless transcode keeps Exif and XMP (needed to rebuild the JPEG)', async () => {
+    const boxes = jxlBoxes(await transcodeJpeg(fixture('p3-rotated.jpg')));
+    expect(boxes).toContain('Exif');
+    expect(boxes).toContain('xml ');
+  });
+
+  it('pixel encodes drop Exif and XMP but keep orientation and the color profile', async () => {
+    const res = await encodeImage(fixture('p3-rotated.jpg'), 'jpeg', lossy, noBrowser);
+    for (const box of ['Exif', 'xml ', 'jumb']) expect(jxlBoxes(res.data)).not.toContain(box);
+    const shown = await decodeRgba(res.data);
+    expect([shown.width, shown.height]).toEqual([240, 320]);
+  });
+});
+
 describe('JXL preview decode', () => {
   it('shows a transcoded P3, rotated JPEG upright and in sRGB', async () => {
     const shown = await decodeRgba(await transcodeJpeg(fixture('p3-rotated.jpg')));

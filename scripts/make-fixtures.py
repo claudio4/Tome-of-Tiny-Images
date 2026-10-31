@@ -53,12 +53,14 @@ p3 = (profiles / "mobile/Display_P3_parametric.icc").read_bytes()
 big_srgb = (profiles / "color.org/sRGB_v4_ICC_preference.icc").read_bytes()  # ~61 KB, LUT-based
 exif = Image.Exif()
 exif[0x0112] = 6  # stored sideways: rotate 90° clockwise to display
+exif[0x010F] = "FixtureCam"  # Make: metadata that only the lossless transcode should keep
+xmp = b'<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/></x:xmpmeta>'
 
 # Display P3 pixels, rotated via EXIF. The reference is what a color-managed
 # viewer shows: upright and converted to sRGB. Noise-free, so compression error
 # stays small next to color shifts.
 smooth = photo(noise=0)
-smooth.save(out / "p3-rotated.jpg", quality=95, subsampling=0, icc_profile=p3, exif=exif.tobytes())
+smooth.save(out / "p3-rotated.jpg", quality=95, subsampling=0, icc_profile=p3, exif=exif.tobytes(), xmp=xmp)
 with Image.open(out / "p3-rotated.jpg") as decoded:
     srgb = ImageCms.profileToProfile(
         ImageOps.exif_transpose(decoded), ImageCms.ImageCmsProfile(io.BytesIO(p3)), ImageCms.createProfile("sRGB"),
