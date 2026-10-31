@@ -23,10 +23,11 @@ export interface Settings {
 export const DEFAULT_SETTINGS: Settings = {
   format: 'jxl',
   jxl: { quality: 90, effort: 7, lossless: false, jpegTranscode: true },
-  avif: { quality: 64, speed: 6, lossless: false, chroma444: false },
+  avif: { quality: 80, speed: 6, lossless: false, chroma444: false },
 };
 
-const STORAGE_KEY = 'settings-v1';
+// Bumped when defaults change so stored settings from older defaults are dropped.
+const STORAGE_KEY = 'settings-v2';
 
 export function loadSettings(): Settings {
   const fresh = structuredClone(DEFAULT_SETTINGS);

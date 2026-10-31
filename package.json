@@ -13,6 +13,7 @@
     "pretest": "scripts/ensure-generated.sh --fixtures",
     "test": "vitest run",
     "build:jxl": "scripts/build-jxl.sh",
+    "build:jpegli": "scripts/build-jpegli.sh",
     "fixtures": "python3 -I scripts/make-fixtures.py tests/fixtures"
   },
   "dependencies": {

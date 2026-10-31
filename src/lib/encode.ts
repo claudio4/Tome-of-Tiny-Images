@@ -1,5 +1,6 @@
-import { encodeRgba, qualityToDistance, transcodeJpeg, type RgbaImage } from '../codecs/jxl';
-import type { InputFormat } from './formats';
+import { decodeJpeg } from '../codecs/jpegli';
+import { encodeRgba, qualityToDistance, transcodeJpeg, type PixelSource, type RgbaImage } from '../codecs/jxl';
+import { jpegOrientation, type InputFormat } from './formats';
 import type { Settings } from './settings';
 
 export interface EncodeResult {
@@ -20,6 +21,21 @@ export function hasTransparency(img: RgbaImage): boolean {
   return false;
 }
 
+/**
+ * Decodes a JPEG for JXL pixel encoding: with jpegli when possible, keeping its
+ * ICC profile and leaving the pixels unrotated (the orientation goes into the
+ * JXL header). Falls back to the browser decoder (oriented, sRGB) for JPEGs
+ * jpegli can't handle here.
+ */
+async function decodeJpegForJxl(bytes: Uint8Array, deps: EncodeDeps): Promise<{ img: RgbaImage; source: PixelSource }> {
+  try {
+    const { icc, ...img } = await decodeJpeg(bytes);
+    return { img, source: { icc, orientation: jpegOrientation(bytes) } };
+  } catch {
+    return { img: await deps.decode(), source: {} };
+  }
+}
+
 export async function encodeImage(
   bytes: Uint8Array,
   format: InputFormat,
@@ -32,10 +48,11 @@ export async function encodeImage(
       const data = await transcodeJpeg(bytes, o.effort);
       return { data, mime: 'image/jxl', ext: 'jxl', method: 'Lossless JPEG transcode' };
     }
-    const img = await deps.decode();
+    const { img, source } = format === 'jpeg' ? await decodeJpegForJxl(bytes, deps) : { img: await deps.decode(), source: {} };
     const distance = qualityToDistance(o.quality);
     const lossless = o.lossless || distance === 0;
-    const data = await encodeRgba(img, hasTransparency(img), { distance, effort: o.effort, lossless });
+    const alpha = format !== 'jpeg' && hasTransparency(img);
+    const data = await encodeRgba(img, alpha, { distance, effort: o.effort, lossless }, source);
     const method = lossless ? 'Lossless' : `Lossy, distance ${distance.toFixed(2)}`;
     return { data, mime: 'image/jxl', ext: 'jxl', method };
   }

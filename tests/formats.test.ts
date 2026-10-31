@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { detectFormat, isAnimated } from '../src/lib/formats';
+import { detectFormat, imageSize, isAnimated, jpegOrientation } from '../src/lib/formats';
 
 const fixture = (name: string) => new Uint8Array(readFileSync(join(__dirname, 'fixtures', name)));
 
@@ -35,5 +35,31 @@ describe('isAnimated', () => {
     ['photo.jpg', 'jpeg', false],
   ] as const)('%s → %s', (name, format, expected) => {
     expect(isAnimated(fixture(name), format)).toBe(expected);
+  });
+});
+
+describe('imageSize', () => {
+  it.each([
+    ['photo.jpg', 'jpeg', 320, 240],
+    ['photo-progressive.jpg', 'jpeg', 320, 240],
+    ['alpha.png', 'png', 320, 240],
+    ['photo.webp', 'webp', 320, 240],
+    ['animated.webp', 'webp', 64, 48],
+    ['static.gif', 'gif', 64, 48],
+  ] as const)('%s → %dx%d', (name, format, width, height) => {
+    expect(imageSize(fixture(name), format)).toEqual({ width, height });
+  });
+});
+
+describe('jpegOrientation', () => {
+  it.each([
+    ['photo.jpg', 1],
+    ['p3-rotated.jpg', 6],
+  ])('%s → %i', (name, orientation) => {
+    expect(jpegOrientation(fixture(name))).toBe(orientation);
+  });
+
+  it('returns 1 for truncated input', () => {
+    expect(jpegOrientation(fixture('p3-rotated.jpg').subarray(0, 30))).toBe(1);
   });
 });

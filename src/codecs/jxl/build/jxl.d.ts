@@ -11,6 +11,9 @@ export interface JxlWasmModule {
     distance: number,
     effort: number,
     lossless: number,
+    iccPtr: number,
+    iccLen: number,
+    orientation: number,
   ): number;
   _jxl_decode_rgba(ptr: number, len: number): number;
   _jxl_reconstruct_jpeg(ptr: number, len: number): number;

@@ -52,6 +52,7 @@ skcms="$(find "$BUILD" -name 'libskcms*.a' | head -1)"
 exports='_jxl_transcode_jpeg,_jxl_encode_rgba,_jxl_decode_rgba,_jxl_reconstruct_jpeg,_jxl_out_ptr,_jxl_out_len,_jxl_out_width,_jxl_out_height,_jxl_out_free,_malloc,_free'
 
 emcc -O3 -msimd128 -c "$ROOT/wasm/jxl/wrapper.c" -o "$BUILD/wrapper.o" \
+  -I"$SRC/third_party/skcms" \
   -I"$SRC/lib/include" -I"$BUILD/lib/include"
 
 em++ -O3 -msimd128 "$BUILD/wrapper.o" "${libs[@]}" \

@@ -7,8 +7,18 @@
 #include <string.h>
 
 #include <emscripten/emscripten.h>
+#include <jxl/cms.h>
 #include <jxl/decode.h>
 #include <jxl/encode.h>
+
+#include "skcms.h"
+
+// Images above this size are always encoded with streaming input.
+#define STREAMING_MIN_PIXELS (16u * 1000 * 1000)
+// ICC profiles larger than this (e.g. LUT-based v4 profiles, tens of KB) are
+// not embedded: the pixels are converted to sRGB instead. Smaller ones cost a
+// few hundred bytes, and libjxl stores common ones (sRGB, Adobe RGB) as a tag.
+#define ICC_EMBED_MAX 8192
 
 static uint8_t* g_out = NULL;
 static size_t g_out_len = 0;
@@ -81,15 +91,41 @@ done:
   return rc;
 }
 
-// Encodes 8-bit sRGB RGBA pixels. When has_alpha is 0 the buffer is compacted
-// to RGB in place, so callers must not reuse it afterwards.
+// Converts RGBA pixels from `profile` to sRGB in place. Returns 0 on success.
+static int convert_to_srgb(uint8_t* rgba, size_t pixels,
+                           const skcms_ICCProfile* profile) {
+  return skcms_Transform(rgba, skcms_PixelFormat_RGBA_8888,
+                         skcms_AlphaFormat_Unpremul, profile, rgba,
+                         skcms_PixelFormat_RGBA_8888,
+                         skcms_AlphaFormat_Unpremul, skcms_sRGB_profile(),
+                         pixels)
+             ? 0
+             : -1;
+}
+
+// Encodes 8-bit RGBA pixels. They are in the color space of `icc` (sRGB when
+// icc_len is 0 or the profile is unusable) and stored unrotated: `orientation`
+// (EXIF values 1-8) goes into the header and decoders apply it. When has_alpha
+// is 0 the buffer is compacted to RGB in place, so callers must not reuse it.
 EMSCRIPTEN_KEEPALIVE int jxl_encode_rgba(uint8_t* rgba, uint32_t width,
                                          uint32_t height, int has_alpha,
                                          float distance, int effort,
-                                         int lossless) {
+                                         int lossless, const uint8_t* icc,
+                                         size_t icc_len, int orientation) {
   reset_output();
   size_t pixels = (size_t)width * height;
   uint32_t channels = has_alpha ? 4 : 3;
+  if (icc_len > 0) {
+    // Like browsers, treat a profile that doesn't parse (or isn't RGB) as sRGB.
+    skcms_ICCProfile profile;
+    if (!skcms_Parse(icc, icc_len, &profile) ||
+        profile.data_color_space != skcms_Signature_RGB) {
+      icc_len = 0;
+    } else if (icc_len > ICC_EMBED_MAX) {
+      if (convert_to_srgb(rgba, pixels, &profile) != 0) return -1;
+      icc_len = 0;
+    }
+  }
   if (!has_alpha) {
     for (size_t i = 0; i < pixels; i++) {
       rgba[i * 3 + 0] = rgba[i * 4 + 0];
@@ -112,15 +148,28 @@ EMSCRIPTEN_KEEPALIVE int jxl_encode_rgba(uint8_t* rgba, uint32_t width,
   info.num_extra_channels = has_alpha ? 1 : 0;
   // Lossless must keep the original color space; lossy uses XYB internally.
   info.uses_original_profile = lossless ? JXL_TRUE : JXL_FALSE;
+  if (orientation >= 1 && orientation <= 8) info.orientation = orientation;
   if (JxlEncoderSetBasicInfo(enc, &info) != JXL_ENC_SUCCESS) goto done;
 
-  JxlColorEncoding color;
-  JxlColorEncodingSetToSRGB(&color, JXL_FALSE);
-  if (JxlEncoderSetColorEncoding(enc, &color) != JXL_ENC_SUCCESS) goto done;
+  if (icc_len > 0) {
+    if (JxlEncoderSetICCProfile(enc, icc, icc_len) != JXL_ENC_SUCCESS) goto done;
+  } else {
+    JxlColorEncoding color;
+    JxlColorEncodingSetToSRGB(&color, JXL_FALSE);
+    if (JxlEncoderSetColorEncoding(enc, &color) != JXL_ENC_SUCCESS) goto done;
+  }
 
   JxlEncoderFrameSettings* fs = JxlEncoderFrameSettingsCreate(enc, NULL);
   if (JxlEncoderFrameSettingsSetOption(fs, JXL_ENC_FRAME_SETTING_EFFORT,
                                        effort) != JXL_ENC_SUCCESS)
+    goto done;
+  // By default libjxl only streams (encodes group by group) for some
+  // effort/distance combinations; otherwise it holds full-image float planes,
+  // which overflows the 4 GB wasm heap for large maps (~40+ MP). Force
+  // streaming input for big images.
+  if (pixels > STREAMING_MIN_PIXELS &&
+      JxlEncoderFrameSettingsSetOption(fs, JXL_ENC_FRAME_SETTING_BUFFERING,
+                                       2) != JXL_ENC_SUCCESS)
     goto done;
   if (lossless) {
     if (JxlEncoderSetFrameLossless(fs, JXL_TRUE) != JXL_ENC_SUCCESS) goto done;
@@ -139,15 +188,19 @@ done:
   return rc;
 }
 
-// Decodes a JXL file to 8-bit RGBA (for previews).
+// Decodes a JXL file to 8-bit sRGB RGBA (for previews; canvases are sRGB).
+// Orientation is applied, so width/height are the displayed dimensions.
 EMSCRIPTEN_KEEPALIVE int jxl_decode_rgba(const uint8_t* data, size_t len) {
   reset_output();
   JxlDecoder* dec = JxlDecoderCreate(NULL);
   if (!dec) return -1;
   int rc = -1;
+  int gray = 0;
   JxlPixelFormat format = {4, JXL_TYPE_UINT8, JXL_NATIVE_ENDIAN, 0};
-  if (JxlDecoderSubscribeEvents(dec, JXL_DEC_BASIC_INFO | JXL_DEC_FULL_IMAGE) !=
-      JXL_DEC_SUCCESS)
+  // Without a CMS, files with an ICC profile would come out in linear sRGB.
+  if (JxlDecoderSetCms(dec, *JxlGetDefaultCms()) != JXL_DEC_SUCCESS) goto done;
+  if (JxlDecoderSubscribeEvents(dec, JXL_DEC_BASIC_INFO | JXL_DEC_COLOR_ENCODING |
+                                         JXL_DEC_FULL_IMAGE) != JXL_DEC_SUCCESS)
     goto done;
   JxlDecoderSetInput(dec, data, len);
   JxlDecoderCloseInput(dec);
@@ -158,6 +211,12 @@ EMSCRIPTEN_KEEPALIVE int jxl_decode_rgba(const uint8_t* data, size_t len) {
       if (JxlDecoderGetBasicInfo(dec, &info) != JXL_DEC_SUCCESS) goto done;
       g_width = info.xsize;
       g_height = info.ysize;
+      gray = info.num_color_channels == 1;
+    } else if (st == JXL_DEC_COLOR_ENCODING) {
+      JxlColorEncoding srgb;
+      JxlColorEncodingSetToSRGB(&srgb, gray ? JXL_TRUE : JXL_FALSE);
+      if (JxlDecoderSetOutputColorProfile(dec, &srgb, NULL, 0) != JXL_DEC_SUCCESS)
+        goto done;
     } else if (st == JXL_DEC_NEED_IMAGE_OUT_BUFFER) {
       size_t size;
       if (JxlDecoderImageOutBufferSize(dec, &format, &size) != JXL_DEC_SUCCESS)

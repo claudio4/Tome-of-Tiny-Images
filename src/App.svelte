@@ -4,7 +4,7 @@
   import FileList from './components/FileList.svelte';
   import CompareViewer from './components/CompareViewer.svelte';
   import { CodecPool } from './lib/pool';
-  import { detectFormat, isAnimated } from './lib/formats';
+  import { detectFormat, imageSize, isAnimated } from './lib/formats';
   import { loadSettings, saveSettings, settingsKey } from './lib/settings';
   import { download, formatBytes, outputName, savedPercent, type Item } from './lib/items';
   import { makeZip } from './lib/zip';
@@ -49,7 +49,9 @@
     const started = performance.now();
     item.status = 'working';
     try {
-      const res = await pool.run({ kind: 'encode', bytes, format: item.format, settings: snapshot }, [bytes.buffer]);
+      const size = imageSize(bytes, item.format);
+      const megapixels = size ? (size.width * size.height) / 1e6 : 0;
+      const res = await pool.run({ kind: 'encode', bytes, format: item.format, settings: snapshot }, [bytes.buffer], megapixels);
       item.output = new Blob([res.data as BlobPart], { type: res.mime });
       item.outName = outputName(item.file.name, res.ext);
       item.method = res.method;

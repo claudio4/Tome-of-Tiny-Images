@@ -2,9 +2,11 @@ node_modules/
 dist/
 .cache/
 *.log
-# Generated locally (scripts/build-jxl.sh, scripts/make-fixtures.py)
+# Generated locally (scripts/build-jxl.sh, scripts/build-jpegli.sh, scripts/make-fixtures.py)
 src/codecs/jxl/build/*
 !src/codecs/jxl/build/jxl.d.ts
+src/codecs/jpegli/build/*
+!src/codecs/jpegli/build/jpegli.d.ts
 tests/fixtures/
 
 # Real-world images for tuning defaults (kept local)

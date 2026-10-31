@@ -16,6 +16,14 @@ export interface RgbaImage {
 
 let modulePromise: Promise<JxlWasmModule> | undefined;
 
+/**
+ * Drops the current wasm instance so the next call starts with a fresh heap.
+ * Wasm memory never shrinks, and repeated huge images can fragment it.
+ */
+export function resetJxlModule(): void {
+  modulePromise = undefined;
+}
+
 function getModule(): Promise<JxlWasmModule> {
   modulePromise ??= createJxlModule();
   return modulePromise;
@@ -46,19 +54,47 @@ export async function transcodeJpeg(jpeg: Uint8Array, effort = 7): Promise<Uint8
   }
 }
 
-/** Encodes 8-bit sRGB RGBA pixels. */
-export async function encodeRgba(img: RgbaImage, hasAlpha: boolean, opts: JxlPixelOptions): Promise<Uint8Array> {
+export interface PixelSource {
+  /** ICC profile of the pixels; sRGB when absent. Large profiles are converted to sRGB instead of embedded. */
+  icc?: Uint8Array;
+  /** EXIF orientation (1-8) of the unrotated pixels, stored in the header for decoders to apply. */
+  orientation?: number;
+}
+
+/** Encodes 8-bit RGBA pixels. */
+export async function encodeRgba(
+  img: RgbaImage,
+  hasAlpha: boolean,
+  opts: JxlPixelOptions,
+  source: PixelSource = {},
+): Promise<Uint8Array> {
   const m = await getModule();
   const bytes = new Uint8Array(img.data.buffer, img.data.byteOffset, img.data.byteLength);
+  const icc = source.icc ?? new Uint8Array();
+  const iccPtr = icc.byteLength ? m._malloc(icc.byteLength) : 0;
+  if (icc.byteLength && !iccPtr) throw new Error('JXL encode: out of memory');
   try {
+    m.HEAPU8.set(icc, iccPtr);
     return withInput(
       m,
       bytes,
       (p) =>
-        m._jxl_encode_rgba(p, img.width, img.height, hasAlpha ? 1 : 0, opts.distance, opts.effort, opts.lossless ? 1 : 0),
+        m._jxl_encode_rgba(
+          p,
+          img.width,
+          img.height,
+          hasAlpha ? 1 : 0,
+          opts.distance,
+          opts.effort,
+          opts.lossless ? 1 : 0,
+          iccPtr,
+          icc.byteLength,
+          source.orientation ?? 1,
+        ),
       'JXL encode',
     );
   } finally {
+    if (iccPtr) m._free(iccPtr);
     m._jxl_out_free();
   }
 }

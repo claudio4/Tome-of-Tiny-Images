@@ -11,13 +11,13 @@ out.mkdir(parents=True, exist_ok=True)
 random.seed(1)
 
 
-def photo(w=320, h=240, phase=0.0):
+def photo(w=320, h=240, phase=0.0, noise=12):
     img = Image.new("RGB", (w, h))
     px = img.load()
     for y in range(h):
         for x in range(w):
-            r = int(127 + 100 * math.sin(x / 23 + phase) + random.randint(-12, 12))
-            g = int(127 + 100 * math.cos(y / 17 + phase) + random.randint(-12, 12))
+            r = int(127 + 100 * math.sin(x / 23 + phase) + random.randint(-noise, noise))
+            g = int(127 + 100 * math.cos(y / 17 + phase) + random.randint(-noise, noise))
             b = int((x + y) * 255 / (w + h))
             px[x, y] = (max(0, min(255, r)), max(0, min(255, g)), b)
     return img
@@ -42,3 +42,30 @@ rgb_frames = [f.convert("RGB") for f in frames]
 rgb_frames[0].save(out / "animated.webp", save_all=True, append_images=rgb_frames[1:], duration=100)
 rgb_frames[0].save(out / "animated.png", save_all=True, append_images=rgb_frames[1:], duration=100)
 (out / "not-an-image.txt").write_text("hello\n")
+
+# Color-managed JPEGs. Profiles come from the libjxl checkout (scripts/build-jxl.sh).
+import io  # noqa: E402
+
+from PIL import ImageCms, ImageOps  # noqa: E402
+
+profiles = Path(__file__).resolve().parent.parent / ".cache/libjxl/third_party/skcms/profiles"
+p3 = (profiles / "mobile/Display_P3_parametric.icc").read_bytes()
+big_srgb = (profiles / "color.org/sRGB_v4_ICC_preference.icc").read_bytes()  # ~61 KB, LUT-based
+exif = Image.Exif()
+exif[0x0112] = 6  # stored sideways: rotate 90° clockwise to display
+
+# Display P3 pixels, rotated via EXIF. The reference is what a color-managed
+# viewer shows: upright and converted to sRGB. Noise-free, so compression error
+# stays small next to color shifts.
+smooth = photo(noise=0)
+smooth.save(out / "p3-rotated.jpg", quality=95, subsampling=0, icc_profile=p3, exif=exif.tobytes())
+with Image.open(out / "p3-rotated.jpg") as decoded:
+    srgb = ImageCms.profileToProfile(
+        ImageOps.exif_transpose(decoded), ImageCms.ImageCmsProfile(io.BytesIO(p3)), ImageCms.createProfile("sRGB"),
+        renderingIntent=ImageCms.Intent.RELATIVE_COLORIMETRIC,
+    )
+    (out / "p3-rotated.srgb.rgba").write_bytes(srgb.convert("RGBA").tobytes())
+
+base.save(out / "big-icc.jpg", quality=95, subsampling=0, icc_profile=big_srgb)
+base.convert("L").save(out / "gray.jpg", quality=90)
+base.convert("CMYK").save(out / "cmyk.jpg", quality=90)
