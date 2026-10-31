@@ -130,15 +130,18 @@
 
 <svelte:window ondragover={(e) => e.preventDefault()} ondrop={onWindowDrop} onpaste={onPaste} />
 
-<main>
-  <header>
-    <h1>Tome of Tiny Images</h1>
-    <p class="tagline">JPEG XL &amp; AVIF, right in your browser. Nothing is uploaded.</p>
-  </header>
+<header class="rock">
+  <div class="wrap">
+    <div class="cartouche room">
+      <h1>Tome of Tiny Images</h1>
+      <p class="tagline">Shrink maps, tokens and art to JPEG XL or AVIF. Everything happens in your browser; nothing is uploaded.</p>
+    </div>
+    <DropZone compact={items.length > 0} onfiles={addFiles} />
+  </div>
+</header>
 
+<main class="wrap">
   <SettingsPanel bind:settings />
-
-  <DropZone compact={items.length > 0} onfiles={addFiles} />
 
   {#if items.length}
     <FileList {items} {currentKey} oncompare={(i) => (comparing = i)} onretry={retry} onremove={remove} />
@@ -146,7 +149,8 @@
     <footer class="summary">
       <div class="totals">
         {#if done.length}
-          <strong>{formatBytes(totalIn)} → {formatBytes(totalOut)}</strong>
+          <span>Before <strong>{formatBytes(totalIn)}</strong></span>
+          <span>After <strong>{formatBytes(totalOut)}</strong></span>
           <span class="saved">{savedPercent(totalIn, totalOut).toFixed(1)}% smaller</span>
         {/if}
         {#if pending}<span class="muted">{pending} in progress…</span>{/if}
@@ -172,22 +176,49 @@
 {/if}
 
 <style>
-  main {
+  .wrap {
     max-width: 960px;
     margin: 0 auto;
-    padding: 32px 16px 64px;
+    padding: 0 16px;
+  }
+  .rock {
+    position: relative;
+    background: var(--rock);
+    padding: 40px 0;
+  }
+  .rock::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--hatch);
+    mask: var(--hatch-mask);
+  }
+  .rock .wrap {
+    position: relative;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    align-items: flex-start;
+    gap: 24px;
   }
-  header h1 {
+  .cartouche {
+    max-width: 34rem;
+    padding: 16px 20px 18px;
+  }
+  h1 {
     margin: 0;
-    font-size: 1.6rem;
-    letter-spacing: -0.02em;
+    font-size: 2.25rem;
   }
   .tagline {
-    margin: 4px 0 0;
+    margin: 8px 0 0;
     color: var(--muted);
+    max-width: 60ch;
+  }
+  main.wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding-top: 24px;
+    padding-bottom: 64px;
   }
   .summary {
     position: sticky;
@@ -197,17 +228,19 @@
     gap: 12px;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 16px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: 0 -4px 16px rgb(0 0 0 / 0.06);
+    padding: 12px 0;
+    background: var(--paper);
+    border-top: 2px solid var(--accent);
   }
   .totals {
     display: flex;
-    gap: 12px;
+    gap: 20px;
     align-items: baseline;
     flex-wrap: wrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .totals strong {
+    margin-left: 4px;
   }
   .saved {
     color: var(--good);
@@ -217,5 +250,13 @@
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+  }
+  @media (max-width: 640px) {
+    .rock {
+      padding: 24px 0;
+    }
+    h1 {
+      font-size: 1.75rem;
+    }
   }
 </style>

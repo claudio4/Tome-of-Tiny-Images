@@ -13,7 +13,7 @@
 </script>
 
 <button
-  class="drop"
+  class="drop room"
   class:compact
   class:over
   onclick={() => input.click()}
@@ -23,7 +23,7 @@
 >
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0-4 4m4-4 4 4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" /></svg>
   <span class="main">{compact ? 'Add more images' : 'Drop images here, or click to choose'}</span>
-  {#if !compact}<span class="hint">PNG, JPEG, WebP, GIF · you can also paste</span>{/if}
+  {#if !compact}<span class="hint">PNG, JPEG, WebP or GIF. You can also paste.</span>{/if}
 </button>
 <input bind:this={input} type="file" accept={ACCEPT} multiple hidden onchange={pick} />
 
@@ -34,25 +34,23 @@
     align-items: center;
     gap: 8px;
     width: 100%;
-    padding: 56px 16px;
-    border: 2px dashed var(--border-strong);
-    border-radius: var(--radius);
-    background: var(--surface);
+    padding: 72px 16px;
+    border-radius: 0;
     color: var(--text);
     cursor: pointer;
     transition:
-      border-color 0.15s,
-      background 0.15s;
+      padding 0.4s ease,
+      background-color 0.15s;
   }
-  .drop:hover,
+  .drop:hover:not(:disabled),
   .drop.over {
-    border-color: var(--accent);
-    background: var(--accent-soft);
+    background-color: var(--room-hover);
+    border-color: var(--wall);
   }
   .drop.compact {
     flex-direction: row;
     justify-content: center;
-    padding: 14px 16px;
+    padding: 12px 16px;
   }
   svg {
     width: 28px;
@@ -68,10 +66,22 @@
     height: 20px;
   }
   .main {
+    font-family: var(--display);
+    font-variation-settings: 'SOFT' 100;
+    font-size: 1.3125rem;
     font-weight: 600;
+  }
+  .compact .main {
+    font-family: inherit;
+    font-size: 1rem;
   }
   .hint {
     color: var(--muted);
-    font-size: 0.9rem;
+    font-size: 0.875rem;
+  }
+  @media (max-width: 640px) {
+    .drop {
+      padding: 48px 16px;
+    }
   }
 </style>

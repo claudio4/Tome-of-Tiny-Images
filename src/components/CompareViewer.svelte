@@ -156,8 +156,8 @@
   </header>
 
   <div class="labels">
-    <span>Original · {formatBytes(item.file.size)}</span>
-    <span>{item.outName?.split('.').pop()?.toUpperCase()} · {formatBytes(item.output!.size)}</span>
+    <span>Original <span class="size">{formatBytes(item.file.size)}</span></span>
+    <span>{item.outName?.split('.').pop()?.toUpperCase()} <span class="size">{formatBytes(item.output!.size)}</span></span>
   </div>
 
   <div class="frame" {onwheel}>
@@ -208,7 +208,7 @@
     padding: 16px;
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    background: var(--surface);
+    background: var(--paper);
     color: var(--text);
     display: flex;
     flex-direction: column;
@@ -251,8 +251,14 @@
   .labels {
     display: flex;
     justify-content: space-between;
-    font-size: 0.85rem;
+    font-size: 0.875rem;
     font-weight: 600;
+  }
+  .labels .size {
+    margin-left: 4px;
+    font-weight: 400;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
   }
   .frame {
     flex: 1;
@@ -267,7 +273,7 @@
     overflow: auto;
     display: flex;
     background: repeating-conic-gradient(var(--checker) 0 25%, transparent 0 50%) 0 0 / 16px 16px;
-    border-radius: 6px;
+    border-radius: var(--radius);
     cursor: grab;
     touch-action: none;
     user-select: none;

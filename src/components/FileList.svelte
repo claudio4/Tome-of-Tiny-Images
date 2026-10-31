@@ -24,9 +24,9 @@
         <span class="filename" title={item.file.name}>{item.file.name}</span>
         <span class="meta">
           {#if item.output && item.outName}<span class="badge">{item.outName.split('.').pop()!.toUpperCase()}</span>{/if}
-          {formatBytes(item.file.size)}
-          {#if item.method}· {item.method}{/if}
-          {#if item.status === 'done' && item.producedWith !== currentKey}· <em>older settings</em>{/if}
+          <span>{formatBytes(item.file.size)}</span>
+          {#if item.method}<span>{item.method}</span>{/if}
+          {#if item.status === 'done' && item.producedWith !== currentKey}<em>Older settings</em>{/if}
         </span>
         {#each item.warnings as w}<span class="warn">{w}</span>{/each}
         {#if item.error}<span class="err">{item.error}</span>{/if}
@@ -48,7 +48,7 @@
       <div class="buttons">
         {#if item.status === 'done' && item.output}
           <button onclick={() => oncompare(item)}>Compare</button>
-          <button class="primary" onclick={() => download(item.output!, item.outName!)}>Download</button>
+          <button onclick={() => download(item.output!, item.outName!)}>Download</button>
         {:else if item.status === 'error'}
           <button onclick={() => onretry(item)}>Retry</button>
         {/if}
@@ -63,16 +63,13 @@
     list-style: none;
     margin: 0;
     padding: 0;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
   }
   li {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto auto;
     gap: 12px;
     align-items: center;
-    padding: 10px 16px;
+    padding: 12px 0;
   }
   li + li {
     border-top: 1px solid var(--border);
@@ -90,17 +87,21 @@
     white-space: nowrap;
   }
   .meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
     color: var(--muted);
-    font-size: 0.85rem;
+    font-size: 0.875rem;
+    font-variant-numeric: tabular-nums;
   }
   .badge {
     display: inline-block;
     padding: 0 5px;
-    margin-right: 4px;
-    border-radius: 4px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    font-size: 0.72rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--text);
+    color: var(--text);
+    font-size: 0.75rem;
     font-weight: 600;
   }
   .warn {

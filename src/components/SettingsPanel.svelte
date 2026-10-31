@@ -61,7 +61,7 @@
           <span>Lossless for other images</span>
         </label>
         <label class="slider" class:disabled={settings.jxl.lossless}>
-          <span>Quality <output>{settings.jxl.quality} · d{qualityToDistance(settings.jxl.quality).toFixed(2)}</output></span>
+          <span>Quality <output>{settings.jxl.quality}</output> <small>distance {qualityToDistance(settings.jxl.quality).toFixed(2)}</small></span>
           <input type="range" min="50" max="100" step="1" bind:value={settings.jxl.quality} disabled={settings.jxl.lossless} />
         </label>
         <label class="slider">
@@ -93,10 +93,8 @@
 
 <style>
   .panel {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 12px 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
   }
   .row {
     display: flex;
@@ -113,22 +111,21 @@
   }
   .segmented {
     display: inline-flex;
-    padding: 3px;
-    border-radius: 8px;
-    background: var(--bg);
-    border: 1px solid var(--border);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
   }
   .segmented label {
-    padding: 6px 14px;
-    border-radius: 6px;
+    padding: 6px 16px;
     cursor: pointer;
     font-weight: 600;
-    color: var(--muted);
+    color: var(--text);
+  }
+  .segmented label + label {
+    border-left: 1px solid var(--accent);
   }
   .segmented label.active {
-    background: var(--surface);
-    color: var(--text);
-    box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+    background: var(--accent);
+    color: var(--accent-text);
   }
   .segmented input {
     position: absolute;
@@ -137,6 +134,7 @@
   }
   .segmented label:has(input:focus-visible) {
     outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
   .advanced {
     display: grid;
@@ -171,9 +169,9 @@
   select {
     font: inherit;
     padding: 6px 8px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    background: var(--room);
     color: var(--text);
   }
   .slider input {
