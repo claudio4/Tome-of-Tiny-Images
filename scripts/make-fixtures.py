@@ -26,6 +26,8 @@ def photo(w=320, h=240, phase=0.0, noise=12):
 base = photo()
 base.save(out / "photo.jpg", quality=90)
 base.save(out / "photo-progressive.jpg", quality=85, progressive=True, subsampling=0)
+base.save(out / "photo-q70.jpg", quality=70)
+base.save(out / "photo-q98.jpg", quality=98, subsampling=0)
 
 rgba = base.convert("RGBA")
 alpha = Image.new("L", base.size)

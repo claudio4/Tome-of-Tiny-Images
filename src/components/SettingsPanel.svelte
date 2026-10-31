@@ -9,11 +9,19 @@
     if (settings.format === 'jxl') {
       const j = settings.jxl;
       const pixels = j.lossless ? 'lossless' : `visually ${j.quality >= 90 ? 'lossless' : 'near-lossless'} (distance ${qualityToDistance(j.quality).toFixed(2)})`;
-      return j.jpegTranscode ? `JPEGs are transcoded losslessly; other images are ${pixels}.` : `All images are encoded ${pixels}.`;
+      if (j.jpegMode === 'reencode') return `All images are encoded ${pixels}.`;
+      const jpegs = j.jpegMode === 'auto' && !j.lossless ? 'JPEGs are transcoded losslessly unless re-encoding is much smaller' : 'JPEGs are transcoded losslessly';
+      return `${jpegs}; other images are ${pixels}.`;
     }
     const a = settings.avif;
     return a.lossless ? 'All images are encoded losslessly.' : `Quality ${a.quality}, ${a.chroma444 ? '4:4:4' : '4:2:0'} chroma.`;
   });
+
+  const jpegModeHelp = {
+    auto: 'Lossless, unless re-encoding at the chosen quality is at least 20% smaller (typical for high-quality JPEGs).',
+    lossless: 'Bit-exact, ~20% smaller; the original JPEG can be restored.',
+    reencode: 'Encodes the pixels at the chosen quality, like other images.',
+  };
 
   function reset() {
     settings[settings.format] = structuredClone(DEFAULT_SETTINGS[settings.format]) as never;
@@ -39,9 +47,14 @@
   {#if open}
     <div class="advanced">
       {#if settings.format === 'jxl'}
-        <label class="check">
-          <input type="checkbox" bind:checked={settings.jxl.jpegTranscode} />
-          <span>Lossless JPEG transcode <small>Bit-exact; the original JPEG can be restored. Recommended.</small></span>
+        <label class="select">
+          <span>JPEG inputs</span>
+          <select bind:value={settings.jxl.jpegMode}>
+            <option value="auto">Automatic (recommended)</option>
+            <option value="lossless">Always lossless transcode</option>
+            <option value="reencode">Always re-encode</option>
+          </select>
+          <small>{jpegModeHelp[settings.jxl.jpegMode]}</small>
         </label>
         <label class="check">
           <input type="checkbox" bind:checked={settings.jxl.lossless} />
@@ -146,10 +159,22 @@
   .slider small {
     display: inline;
   }
-  .slider {
+  .slider,
+  .select {
     display: flex;
     flex-direction: column;
     gap: 6px;
+  }
+  .select small {
+    color: var(--muted);
+  }
+  select {
+    font: inherit;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
   }
   .slider input {
     width: 100%;

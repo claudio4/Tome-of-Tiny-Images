@@ -1,5 +1,11 @@
 export type OutputFormat = 'jxl' | 'avif';
 
+/**
+ * How JPEG inputs become JXL: 'lossless' always transcodes (bit-exact, ~20%
+ * smaller), 'reencode' always encodes the pixels, 'auto' picks per image.
+ */
+export type JpegMode = 'auto' | 'lossless' | 'reencode';
+
 export interface Settings {
   format: OutputFormat;
   jxl: {
@@ -7,8 +13,7 @@ export interface Settings {
     quality: number;
     effort: number;
     lossless: boolean;
-    /** Losslessly transcode JPEG inputs instead of re-encoding their pixels. */
-    jpegTranscode: boolean;
+    jpegMode: JpegMode;
   };
   avif: {
     quality: number;
@@ -22,12 +27,12 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = {
   format: 'jxl',
-  jxl: { quality: 90, effort: 7, lossless: false, jpegTranscode: true },
+  jxl: { quality: 90, effort: 7, lossless: false, jpegMode: 'auto' },
   avif: { quality: 80, speed: 6, lossless: false, chroma444: false },
 };
 
 // Bumped when defaults change so stored settings from older defaults are dropped.
-const STORAGE_KEY = 'settings-v2';
+const STORAGE_KEY = 'settings-v3';
 
 export function loadSettings(): Settings {
   const fresh = structuredClone(DEFAULT_SETTINGS);

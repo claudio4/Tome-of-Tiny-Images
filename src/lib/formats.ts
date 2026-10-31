@@ -150,3 +150,59 @@ export function jpegOrientation(b: Uint8Array): number {
   }
   return 1;
 }
+
+/** libjpeg's standard luminance quantization table (quality 50), in natural order. */
+const STD_LUMA_QUANT = [
+  16, 11, 10, 16, 24, 40, 51, 61, 12, 12, 14, 19, 26, 58, 60, 55, 14, 13, 16, 24, 40, 57, 69, 56, 14, 17, 22, 29, 51, 87,
+  80, 62, 18, 22, 37, 56, 68, 109, 103, 77, 24, 35, 55, 64, 81, 104, 113, 92, 49, 64, 78, 87, 103, 121, 120, 101, 72, 92,
+  95, 98, 112, 100, 103, 99,
+];
+const ZIGZAG = [
+  0, 1, 8, 16, 9, 2, 3, 10, 17, 24, 32, 25, 18, 11, 4, 5, 12, 19, 26, 33, 40, 48, 41, 34, 27, 20, 13, 6, 7, 14, 21, 28, 35,
+  42, 49, 56, 57, 50, 43, 36, 29, 22, 15, 23, 30, 37, 44, 51, 58, 59, 52, 45, 38, 31, 39, 46, 53, 60, 61, 54, 47, 55, 62,
+  63,
+];
+
+/**
+ * Estimated libjpeg-style quality (0-100) of a JPEG, from the quantization
+ * table of its first (luma) component; null when it can't be read. Encoders
+ * with custom tables get the libjpeg quality whose table is closest on average.
+ */
+export function jpegQuality(b: Uint8Array): number | null {
+  const view = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  const tables = new Map<number, number[]>();
+  try {
+    for (let p = 2; p + 4 < b.length; ) {
+      if (b[p] !== 0xff) return null;
+      const marker = b[p + 1];
+      if (marker === 0xff) {
+        p++;
+        continue;
+      }
+      const len = view.getUint16(p + 2);
+      if (marker === 0xdb) {
+        // DQT: one or more tables, each 64 values (8- or 16-bit) in zigzag order.
+        for (let q = p + 4; q < p + 2 + len; ) {
+          const wide = b[q] >> 4;
+          const id = b[q] & 15;
+          const table = new Array<number>(64);
+          for (let k = 0; k < 64; k++) table[ZIGZAG[k]] = wide ? view.getUint16(q + 1 + 2 * k) : b[q + 1 + k];
+          tables.set(id, table);
+          q += 1 + (wide ? 128 : 64);
+        }
+      } else if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+        const table = tables.get(b[p + 12]); // Tq of the first component
+        if (!table) return null;
+        const scale = table.reduce((sum, v, i) => sum + (v * 100) / STD_LUMA_QUANT[i], 0) / 64;
+        const quality = scale <= 100 ? (200 - scale) / 2 : 5000 / scale;
+        return Math.max(0, Math.min(100, quality));
+      } else if (marker === 0xda) {
+        return null;
+      }
+      p += 2 + len;
+    }
+  } catch {
+    // truncated or malformed segment
+  }
+  return null;
+}

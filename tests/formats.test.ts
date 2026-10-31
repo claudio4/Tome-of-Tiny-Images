@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { detectFormat, imageSize, isAnimated, jpegOrientation } from '../src/lib/formats';
+import { detectFormat, imageSize, isAnimated, jpegOrientation, jpegQuality } from '../src/lib/formats';
 
 const fixture = (name: string) => new Uint8Array(readFileSync(join(__dirname, 'fixtures', name)));
 
@@ -61,5 +61,22 @@ describe('jpegOrientation', () => {
 
   it('returns 1 for truncated input', () => {
     expect(jpegOrientation(fixture('p3-rotated.jpg').subarray(0, 30))).toBe(1);
+  });
+});
+
+describe('jpegQuality', () => {
+  it.each([
+    ['photo-q70.jpg', 70],
+    ['photo-progressive.jpg', 85],
+    ['photo.jpg', 90],
+    ['p3-rotated.jpg', 95],
+    ['photo-q98.jpg', 98],
+  ])('%s ≈ %i', (name, quality) => {
+    expect(jpegQuality(fixture(name))).toBeCloseTo(quality, 0);
+  });
+
+  it('returns null for non-JPEG or truncated input', () => {
+    expect(jpegQuality(fixture('opaque.png'))).toBeNull();
+    expect(jpegQuality(fixture('photo.jpg').subarray(0, 40))).toBeNull();
   });
 });

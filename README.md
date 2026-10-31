@@ -2,9 +2,12 @@
 
 Compress PNG, JPEG, WebP and GIF images to **JPEG XL** or **AVIF**, entirely in the browser. Nothing is uploaded.
 
-- JPEG → JXL uses libjxl's lossless JPEG transcode: typically ~20% smaller, and the original JPEG can be restored bit-exactly (`djxl file.jxl file.jpg`).
+- JPEG → JXL picks per image by default ("Automatic" in Advanced; "Always lossless transcode" and "Always re-encode" are also available):
+  - libjxl's lossless JPEG transcode is typically ~20% smaller, and the original JPEG can be restored bit-exactly (`djxl file.jxl file.jpg`).
+  - Re-encoding the pixels at the chosen quality is used instead when it's at most 80% of the transcode's size, which is typical for high-quality JPEGs.
+  - It isn't even tried when the JPEG's estimated quality (from its quantization tables) is 10+ below the target quality: re-encoding those came out larger than the transcode. Lossless output settings always use the transcode.
 - Other inputs are decoded by the browser and encoded at visually-lossless defaults (JXL distance 1.0 / AVIF quality 80, which score about the same in SSIMULACRA2). Advanced settings are available but optional.
-- When JPEGs are re-encoded to JXL instead (transcode turned off), they are decoded with [jpegli](https://github.com/google/jpegli), which is more precise than the browser's decoder (about 1–3% smaller output at slightly higher quality). Their ICC profile is kept (profiles over 8 KB are converted to sRGB instead) and the EXIF orientation goes into the JXL header. CMYK JPEGs, and grayscale ones with a gray profile, fall back to the browser decoder.
+- JPEGs re-encoded to JXL are decoded with [jpegli](https://github.com/google/jpegli), which is more precise than the browser's decoder (about 1–3% smaller output at slightly higher quality). Their ICC profile is kept (profiles over 8 KB are converted to sRGB instead) and the EXIF orientation goes into the JXL header. CMYK JPEGs, and grayscale ones with a gray profile, fall back to the browser decoder.
 - Animated GIF/WebP/APNG inputs keep only their first frame (flagged in the UI).
 - Other pixel-path encodes (all non-JPEG inputs, and everything to AVIF) are sRGB and pre-rotated; ICC profiles are not carried over.
 - Metadata: the lossless transcode keeps all of the JPEG's metadata (EXIF, XMP, including e.g. GPS location), since it is needed to rebuild the original file. Every other output drops EXIF/XMP; only the orientation and color profile survive as described above.

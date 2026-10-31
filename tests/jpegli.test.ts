@@ -11,7 +11,7 @@ const P3_ICC = new Uint8Array(
   readFileSync(join(__dirname, '../.cache/libjxl/third_party/skcms/profiles/mobile/Display_P3_parametric.icc')),
 );
 
-const lossy: Settings = { ...DEFAULT_SETTINGS, jxl: { ...DEFAULT_SETTINGS.jxl, jpegTranscode: false } };
+const lossy: Settings = { ...DEFAULT_SETTINGS, jxl: { ...DEFAULT_SETTINGS.jxl, jpegMode: 'reencode' } };
 const noBrowser = {
   decode: () => Promise.reject(new Error('browser decode not available')),
   encodeAvif: () => Promise.reject(new Error('unused')),
