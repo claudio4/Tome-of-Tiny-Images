@@ -1,0 +1,58 @@
+# Builds the site (including the libjxl + jpegli wasm) and uploads dist/ to statichost.eu.
+# Needs the repo secret STATICHOST_APIKEY (token from https://builder.statichost.eu/account)
+# and the repo variable STATICHOST_SITE (the site name, i.e. <name>.statichost.eu).
+name: Deploy
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+          cache: npm
+
+      # The wasm builds take several minutes; reuse them until their pinned
+      # sources, build scripts or wrappers change.
+      - name: Cache wasm codecs
+        uses: actions/cache@v6
+        with:
+          path: |
+            src/codecs/jxl/build/jxl.js
+            src/codecs/jxl/build/jxl.wasm
+            src/codecs/jpegli/build/jpegli.js
+            src/codecs/jpegli/build/jpegli.wasm
+          key: wasm-${{ hashFiles('scripts/build-jxl.sh', 'scripts/build-jpegli.sh', 'wasm/**') }}
+
+      - run: npm ci
+
+      # prebuild runs scripts/ensure-generated.sh, which builds any missing wasm
+      # in the emscripten/emsdk image via docker.
+      - run: npm run build
+
+      - name: Upload to statichost.eu
+        env:
+          STATICHOST_APIKEY: ${{ secrets.STATICHOST_APIKEY }}
+          STATICHOST_SITE: ${{ vars.STATICHOST_SITE }}
+        run: |
+          [[ -n "$STATICHOST_APIKEY" && -n "$STATICHOST_SITE" ]] \
+            || { echo "::error::Set the STATICHOST_APIKEY secret and STATICHOST_SITE variable"; exit 1; }
+          # Zip the contents of dist/, not the directory itself.
+          (cd dist && zip -qr "$RUNNER_TEMP/site.zip" .)
+          curl --fail-with-body \
+            -X POST "https://builder.statichost.eu/$STATICHOST_SITE/drop" \
+            -H "Authorization: Bearer $STATICHOST_APIKEY" \
+            -H "Content-Type: application/zip" \
+            -H "Accept: text/plain" \
+            --data-binary "@$RUNNER_TEMP/site.zip"
