@@ -38,3 +38,35 @@ export function download(blob: Blob, name: string): void {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
+
+type DirectoryPicker = (options?: { id?: string; mode?: 'read' | 'readwrite' }) => Promise<FileSystemDirectoryHandle>;
+const showDirectoryPicker = (globalThis as { showDirectoryPicker?: DirectoryPicker }).showDirectoryPicker;
+
+/** Whether files can be written straight into a user-picked folder (File System Access API). */
+export const canSaveToFolder =
+  typeof showDirectoryPicker === 'function' &&
+  typeof globalThis.FileSystemFileHandle === 'function' &&
+  typeof FileSystemFileHandle.prototype.createWritable === 'function';
+
+/**
+ * Asks for a folder and writes the files into it, confirming before overwriting any.
+ * Resolves false if the user cancels the picker or the overwrite prompt.
+ */
+export async function saveToFolder(files: { name: string; blob: Blob }[]): Promise<boolean> {
+  let dir: FileSystemDirectoryHandle;
+  try {
+    dir = await showDirectoryPicker!({ id: 'compressed-images', mode: 'readwrite' });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') return false;
+    throw err;
+  }
+  const existing = await Promise.all(files.map((f) => dir.getFileHandle(f.name).then(() => true, () => false)));
+  const clashes = existing.filter(Boolean).length;
+  if (clashes && !confirm(`${clashes} of these files already exist in “${dir.name}”. Overwrite them?`)) return false;
+  for (const f of files) {
+    const writable = await (await dir.getFileHandle(f.name, { create: true })).createWritable();
+    await writable.write(f.blob);
+    await writable.close();
+  }
+  return true;
+}

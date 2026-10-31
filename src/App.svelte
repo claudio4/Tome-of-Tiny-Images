@@ -6,8 +6,8 @@
   import { CodecPool } from './lib/pool';
   import { detectFormat, imageSize, isAnimated } from './lib/formats';
   import { loadSettings, saveSettings, settingsKey } from './lib/settings';
-  import { download, formatBytes, outputName, savedPercent, type Item } from './lib/items';
-  import { makeZip } from './lib/zip';
+  import { canSaveToFolder, download, formatBytes, outputName, saveToFolder, savedPercent, type Item } from './lib/items';
+  import { makeZip, uniqueNames } from './lib/zip';
 
   const pool = new CodecPool();
   let settings = $state(loadSettings());
@@ -80,6 +80,32 @@
     items = [];
   }
 
+  let downloading = $state(false);
+
+  async function downloadEach() {
+    downloading = true;
+    try {
+      const names = uniqueNames(done.map((i) => i.outName!));
+      const files = done.map((i, n) => ({ name: names[n], blob: i.output! }));
+      // Writing into a picked folder avoids the browser's multiple-downloads prompt entirely.
+      if (canSaveToFolder) {
+        try {
+          await saveToFolder(files);
+        } catch (err) {
+          alert(`Could not save to the folder: ${err}`);
+        }
+        return;
+      }
+      for (const [n, f] of files.entries()) {
+        // Browsers drop clicks fired back to back; Chrome may ask once to allow multiple downloads.
+        if (n) await new Promise((r) => setTimeout(r, 250));
+        download(f.blob, f.name);
+      }
+    } finally {
+      downloading = false;
+    }
+  }
+
   async function downloadAll() {
     zipping = true;
     try {
@@ -130,8 +156,11 @@
           <button onclick={recompressStale}>Re-compress {stale} with current settings</button>
         {/if}
         <button onclick={clearAll}>Clear</button>
+        <button disabled={!done.length || downloading} onclick={downloadEach}>
+          {downloading ? 'Saving…' : canSaveToFolder ? `Save all (${done.length}) to folder…` : `Download all (${done.length})`}
+        </button>
         <button class="primary" disabled={!done.length || zipping} onclick={downloadAll}>
-          {zipping ? 'Zipping…' : `Download all (${done.length}) as ZIP`}
+          {zipping ? 'Zipping…' : `Download as ZIP`}
         </button>
       </div>
     </footer>
