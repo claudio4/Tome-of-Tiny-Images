@@ -1,5 +1,12 @@
 # Tome of Tiny Images (TOTI)
 
+> [!CAUTION]
+> This is one of my first purely vibe-coded projects. I made it mostly because I needed a tool like this, and partly because I wanted to see what building something with one of the Big Boy models felt like. Besides, it runs entirely in your browser, so it's not my server's security nightmare.
+>
+> I tried to steer the model in the right direction, but I didn't double-check any of its tests or claims. They all sounded well thought out, but that's exactly what LLMs specialize in, so yeah: pure faith-driven development.
+>
+> With that said, I'll leave you with the clanker and its very detailed description.
+
 Compress PNG, JPEG, WebP and GIF images to **JPEG XL** or **AVIF**, entirely in the browser. Nothing is uploaded.
 
 - JPEG → JXL picks per image by default ("Automatic" in Advanced; "Always lossless transcode" and "Always re-encode" are also available):
